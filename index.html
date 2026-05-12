@@ -2,89 +2,897 @@
 <html lang="ko">
 <head>
     <meta charset="UTF-8">
-    <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>손금AI - 당신의 운명을 읽어드립니다</title>
-    <link rel="stylesheet" href="./style.css">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
+    <title>손금 AI | Cosmic Palmistry</title>
+    <style>
+        @import url('https://fonts.googleapis.com/css2?family=Outfit:wght@300;400;600;700&family=Noto+Sans+KR:wght@300;400;500;700&display=swap');
+
+        :root {
+            --primary: #8b5cf6;
+            --primary-glow: rgba(139, 92, 246, 0.5);
+            --accent: #f59e0b;
+            --accent-glow: rgba(245, 158, 11, 0.4);
+            --bg-deep: #030308;
+            --bg-card: rgba(255, 255, 255, 0.05);
+            --text-main: #f8fafc;
+            --text-dim: rgba(248, 250, 252, 0.5);
+            --glass-border: rgba(255, 255, 255, 0.1);
+        }
+
+        * {
+            box-sizing: border-box;
+            margin: 0;
+            padding: 0;
+            -webkit-tap-highlight-color: transparent;
+        }
+
+        body {
+            background-color: var(--bg-deep);
+            color: var(--text-main);
+            font-family: 'Outfit', 'Noto Sans KR', sans-serif;
+            overflow: hidden;
+            height: 100vh;
+            display: flex;
+            justify-content: center;
+        }
+
+        #app-container {
+            width: 100%;
+            max-width: 480px;
+            height: 100vh;
+            position: relative;
+            background: radial-gradient(circle at top right, #1e1b4b 0%, #030308 100%);
+            overflow: hidden;
+            display: flex;
+            flex-direction: column;
+        }
+
+        /* Starfield Background */
+        #star-canvas {
+            position: absolute;
+            top: 0;
+            left: 0;
+            width: 100%;
+            height: 100%;
+            z-index: 0;
+            pointer-events: none;
+        }
+
+        .screen {
+            position: absolute;
+            inset: 0;
+            display: flex;
+            flex-direction: column;
+            padding: 2rem;
+            z-index: 10;
+            opacity: 0;
+            pointer-events: none;
+            transition: transform 0.6s cubic-bezier(0.23, 1, 0.32, 1), opacity 0.4s ease;
+            transform: translateY(20px);
+            overflow-y: auto;
+        }
+
+        .screen.active {
+            opacity: 1;
+            pointer-events: all;
+            transform: translateY(0);
+        }
+
+        /* Typography */
+        h1 {
+            font-size: 2.5rem;
+            font-weight: 700;
+            background: linear-gradient(135deg, #fff 0%, var(--primary) 100%);
+            -webkit-background-clip: text;
+            -webkit-text-fill-color: transparent;
+            margin-bottom: 0.5rem;
+            text-align: center;
+        }
+
+        .subtitle {
+            color: var(--text-dim);
+            text-align: center;
+            font-size: 0.95rem;
+            line-height: 1.6;
+            margin-bottom: 2.5rem;
+        }
+
+        /* Buttons */
+        .btn {
+            background: none;
+            border: none;
+            padding: 1rem 1.5rem;
+            border-radius: 16px;
+            font-family: inherit;
+            font-size: 1rem;
+            font-weight: 600;
+            cursor: pointer;
+            transition: all 0.3s ease;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            gap: 0.75rem;
+            width: 100%;
+        }
+
+        .btn-primary {
+            background: linear-gradient(135deg, var(--primary) 0%, #6d28d9 100%);
+            color: white;
+            box-shadow: 0 8px 24px var(--primary-glow);
+        }
+
+        .btn-primary:active {
+            transform: scale(0.97);
+        }
+
+        .btn-secondary {
+            background: var(--bg-card);
+            color: var(--text-main);
+            border: 1px solid var(--glass-border);
+            backdrop-filter: blur(10px);
+        }
+
+        .btn-icon {
+            width: 44px;
+            height: 44px;
+            padding: 0;
+            border-radius: 50%;
+            background: var(--bg-card);
+            border: 1px solid var(--glass-border);
+            color: white;
+        }
+
+        /* Navigation Bar */
+        .top-nav {
+            position: absolute;
+            top: 0;
+            left: 0;
+            right: 0;
+            padding: 1rem 1.5rem;
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            z-index: 100;
+        }
+
+        /* Intro Screen */
+        #screen-intro {
+            justify-content: center;
+            align-items: center;
+        }
+
+        .logo-container {
+            position: relative;
+            width: 120px;
+            height: 120px;
+            margin-bottom: 2rem;
+        }
+
+        .logo-orb {
+            position: absolute;
+            inset: 0;
+            background: radial-gradient(circle at 30% 30%, var(--primary) 0%, #1e1b4b 100%);
+            border-radius: 50%;
+            box-shadow: 0 0 40px var(--primary-glow);
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            font-size: 3rem;
+            animation: float 4s ease-in-out infinite;
+        }
+
+        @keyframes float {
+            0%, 100% { transform: translateY(0); }
+            50% { transform: translateY(-10px); }
+        }
+
+        /* Upload Screen */
+        .upload-area {
+            position: relative;
+            width: 100%;
+            aspect-ratio: 3/4;
+            background: var(--bg-card);
+            border: 2px dashed var(--glass-border);
+            border-radius: 24px;
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            justify-content: center;
+            overflow: hidden;
+            margin-bottom: 2rem;
+            transition: border-color 0.3s ease;
+        }
+
+        .upload-area.active {
+            border-color: var(--primary);
+        }
+
+        .palm-guide {
+            position: absolute;
+            width: 70%;
+            height: 70%;
+            opacity: 0.3;
+            pointer-events: none;
+            transition: opacity 0.3s ease;
+        }
+
+        #preview-img {
+            width: 100%;
+            height: 100%;
+            object-fit: cover;
+            display: none;
+        }
+
+        /* Scanning Screen */
+        #screen-scanning {
+            justify-content: center;
+            align-items: center;
+        }
+
+        .scanner-box {
+            position: relative;
+            width: 280px;
+            height: 380px;
+            border-radius: 20px;
+            overflow: hidden;
+            margin-bottom: 2rem;
+            box-shadow: 0 0 30px rgba(0,0,0,0.5);
+        }
+
+        #scan-img {
+            width: 100%;
+            height: 100%;
+            object-fit: cover;
+            filter: grayscale(0.5) contrast(1.2);
+        }
+
+        .scan-line {
+            position: absolute;
+            top: 0;
+            left: 0;
+            width: 100%;
+            height: 4px;
+            background: linear-gradient(90deg, transparent, var(--accent), transparent);
+            box-shadow: 0 0 15px var(--accent-glow);
+            animation: scanMove 3s linear infinite;
+            z-index: 5;
+        }
+
+        @keyframes scanMove {
+            0% { top: 0; opacity: 0; }
+            10% { opacity: 1; }
+            90% { opacity: 1; }
+            100% { top: 100%; opacity: 0; }
+        }
+
+        .scan-grid {
+            position: absolute;
+            inset: 0;
+            background-image: 
+                linear-gradient(rgba(139, 92, 246, 0.1) 1px, transparent 1px),
+                linear-gradient(90deg, rgba(139, 92, 246, 0.1) 1px, transparent 1px);
+            background-size: 20px 20px;
+            z-index: 2;
+        }
+
+        /* Result Screen */
+        .result-scroll {
+            width: 100%;
+            padding-top: 1rem;
+        }
+
+        .result-card {
+            background: var(--bg-card);
+            border: 1px solid var(--glass-border);
+            border-radius: 20px;
+            padding: 1.5rem;
+            margin-bottom: 1rem;
+            backdrop-filter: blur(12px);
+        }
+
+        .line-header {
+            display: flex;
+            align-items: center;
+            gap: 1rem;
+            margin-bottom: 1rem;
+        }
+
+        .line-icon {
+            width: 40px;
+            height: 40px;
+            background: rgba(139, 92, 246, 0.2);
+            border-radius: 12px;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            font-size: 1.2rem;
+        }
+
+        .line-name {
+            font-weight: 700;
+            font-size: 1.1rem;
+        }
+
+        .line-score {
+            margin-left: auto;
+            color: var(--accent);
+            font-weight: 700;
+        }
+
+        .line-desc {
+            color: var(--text-dim);
+            font-size: 0.95rem;
+            line-height: 1.6;
+        }
+
+        .overall-score {
+            text-align: center;
+            margin-bottom: 2rem;
+        }
+
+        .stars {
+            color: var(--accent);
+            font-size: 1.5rem;
+            margin-top: 0.5rem;
+        }
+
+        /* History Screen */
+        .history-item {
+            display: flex;
+            align-items: center;
+            gap: 1rem;
+            background: var(--bg-card);
+            border: 1px solid var(--glass-border);
+            border-radius: 16px;
+            padding: 1rem;
+            margin-bottom: 0.75rem;
+            cursor: pointer;
+        }
+
+        .history-thumb {
+            width: 50px;
+            height: 50px;
+            border-radius: 10px;
+            object-fit: cover;
+        }
+
+        .history-info {
+            flex: 1;
+        }
+
+        .history-date {
+            font-size: 0.75rem;
+            color: var(--text-dim);
+        }
+
+        .history-summary {
+            font-size: 0.9rem;
+            font-weight: 500;
+            white-space: nowrap;
+            overflow: hidden;
+            text-overflow: ellipsis;
+            max-width: 200px;
+        }
+
+        /* Settings Modal */
+        #settings-overlay {
+            position: fixed;
+            inset: 0;
+            background: rgba(0,0,0,0.8);
+            backdrop-filter: blur(5px);
+            z-index: 1000;
+            display: none;
+            align-items: center;
+            justify-content: center;
+            padding: 2rem;
+        }
+
+        .settings-card {
+            background: #1e1b4b;
+            border: 1px solid var(--glass-border);
+            border-radius: 24px;
+            padding: 2rem;
+            width: 100%;
+            max-width: 360px;
+        }
+
+        input {
+            width: 100%;
+            padding: 1rem;
+            background: rgba(0,0,0,0.3);
+            border: 1px solid var(--glass-border);
+            border-radius: 12px;
+            color: white;
+            margin-bottom: 1.5rem;
+            font-family: inherit;
+        }
+
+        /* Loading Dots */
+        .loading-dots {
+            display: flex;
+            gap: 8px;
+            margin-top: 1rem;
+        }
+
+        .dot {
+            width: 10px;
+            height: 10px;
+            background: var(--primary);
+            border-radius: 50%;
+            animation: bounce 1.4s infinite ease-in-out both;
+        }
+
+        .dot:nth-child(1) { animation-delay: -0.32s; }
+        .dot:nth-child(2) { animation-delay: -0.16s; }
+
+        @keyframes bounce {
+            0%, 80%, 100% { transform: scale(0); }
+            40% { transform: scale(1.0); }
+        }
+
+        /* Layout Helpers */
+        .spacer { flex: 1; }
+        .mt-4 { margin-top: 1rem; }
+        .mb-4 { margin-bottom: 1rem; }
+
+        ::-webkit-scrollbar {
+            width: 4px;
+        }
+        ::-webkit-scrollbar-thumb {
+            background: var(--glass-border);
+            border-radius: 10px;
+        }
+    </style>
 </head>
 <body>
-    <div id="palmApp">
-        <canvas id="starsCanvas"></canvas>
 
-        <!-- INTRO -->
-        <div class="screen active" id="introScreen">
-            <div class="logo-orb">🖐</div>
-            <div class="badge">AI Palm Reading</div>
-            <div class="title" style="margin-bottom:12px">손금AI</div>
-            <p class="subtitle" style="margin-bottom:44px">당신의 손 안에 담긴 운명을<br>인공지능이 읽어드립니다</p>
-            <button class="btn-primary" onclick="goTo('uploadScreen')">✦ &nbsp;손금 읽기 시작</button>
-            <button class="btn-ghost" onclick="showHistory()">📜 &nbsp;분석 기록 보기</button>
-            <p style="color:rgba(255,255,255,0.25);font-size:11px;margin-top:18px">손바닥을 밝은 곳에서 펼쳐 촬영해주세요</p>
+    <div id="app-container">
+        <canvas id="star-canvas"></canvas>
+
+        <!-- Top Navigation -->
+        <div class="top-nav">
+            <button class="btn-icon" id="btn-back" style="visibility: hidden;" onclick="goBack()">
+                <svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="m15 18-6-6 6-6"/></svg>
+            </button>
+            <div style="font-weight: 600; font-size: 1.1rem; color: var(--text-dim)">Palmistry AI</div>
+            <button class="btn-icon" onclick="toggleSettings()">
+                <svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="12" cy="12" r="3"/><path d="M19.4 15a1.65 1.65 0 0 0 .33 1.82l.06.06a2 2 0 0 1 0 2.83 2 2 0 0 1-2.83 0l-.06-.06a1.65 1.65 0 0 0-1.82-.33 1.65 1.65 0 0 0-1 1.51V21a2 2 0 0 1-2 2 2 2 0 0 1-2-2v-.09A1.65 1.65 0 0 0 9 19.4a1.65 1.65 0 0 0-1.82.33l-.06.06a2 2 0 0 1-2.83 0 2 2 0 0 1 12 12s-2.83 0l.06-.06a1.65 1.65 0 0 0 .33-1.82 1.65 1.65 0 0 0-1.51-1H3a2 2 0 0 1-2-2 2 2 0 0 1 2-2h.09A1.65 1.65 0 0 0 4.6 9a1.65 1.65 0 0 0-.33-1.82l-.06-.06a2 2 0 0 1 0-2.83 2 2 0 0 1 2.83 0l.06.06a1.65 1.65 0 0 0 1.82.33H9a1.65 1.65 0 0 0 1-1.51V3a2 2 0 0 1 2-2 2 2 0 0 1 2 2v.09a1.65 1.65 0 0 0 1 1.51 1.65 1.65 0 0 0 1.82-.33l.06-.06a2 2 0 0 1 2.83 0 2 2 0 0 1 0 2.83l-.06.06a1.65 1.65 0 0 0-.33 1.82V9a1.65 1.65 0 0 0 1.51 1H21a2 2 0 0 1 2 2 2 2 0 0 1-2 2h-.09a1.65 1.65 0 0 0-1.51 1z"/></svg>
+            </button>
         </div>
 
-        <!-- UPLOAD -->
-        <div class="screen" id="uploadScreen">
-            <button class="btn-back" onclick="goTo('introScreen')">←</button>
-            <div class="badge">Step 1</div>
-            <h2 style="font-size:22px;font-weight:600;color:#fff;margin-bottom:8px">손바닥을 찍어주세요</h2>
-            <p class="subtitle" style="margin-bottom:28px">손금이 잘 보이도록 밝은 곳에서<br>손을 펼쳐 촬영해주세요</p>
-            <div class="upload-zone" onclick="document.getElementById('fileInput').click()">
-                <div class="corner c-tl"></div><div class="corner c-tr"></div>
-                <div class="corner c-bl"></div><div class="corner c-br"></div>
-                <div class="palm-guide">
-                    <svg class="palm-svg" viewBox="0 0 100 120">
-                        <path d="M50,110 Q30,110 20,80 Q10,50 20,30 Q25,20 35,25 Q45,30 40,50 Q40,60 50,60 Q60,60 60,50 Q55,30 65,25 Q75,20 80,30 Q90,50 80,80 Q70,110 50,110" />
-                    </svg>
+        <!-- Screens -->
+
+        <!-- 1. INTRO -->
+        <div class="screen active" id="screen-intro">
+            <div class="logo-container">
+                <div class="logo-orb">🖐️</div>
+            </div>
+            <h1>Cosmic Palmistry</h1>
+            <p class="subtitle">우주의 에너지가 담긴 당신의 손금,<br>인공지능으로 당신의 운명을 읽어드립니다.</p>
+            
+            <button class="btn btn-primary mb-4" onclick="goTo('upload')">
+                <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><path d="M12 3v14"/><path d="m5 10 7 7 7-7"/><path d="M20 21H4"/></svg>
+                분석 시작하기
+            </button>
+            <button class="btn btn-secondary" onclick="goTo('history')">
+                <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><path d="M3 12a9 9 0 1 0 9-9 9.75 9.75 0 0 0-6.74 2.74L3 8"/><path d="M3 3v5h5"/><path d="M12 7v5l4 2"/></svg>
+                과거 기록 보기
+            </button>
+        </div>
+
+        <!-- 2. UPLOAD -->
+        <div class="screen" id="screen-upload">
+            <h2 style="text-align:center; margin-top: 3rem;">손 사진 업로드</h2>
+            <p class="subtitle">밝은 곳에서 손바닥이 잘 보이도록<br>가이드에 맞춰 촬영해 주세요.</p>
+
+            <div class="upload-area" id="drop-zone" onclick="document.getElementById('file-input').click()">
+                <img id="preview-img" alt="preview">
+                <svg class="palm-guide" id="guide-svg" viewBox="0 0 200 250" fill="none" stroke="currentColor" stroke-width="2">
+                    <path d="M50,200 Q40,150 45,100 Q50,50 60,40 Q70,30 80,45 Q90,60 85,100" stroke-dasharray="4"/>
+                    <path d="M85,100 Q80,50 90,35 Q100,20 110,35 Q120,50 115,100" stroke-dasharray="4"/>
+                    <path d="M115,100 Q120,55 130,45 Q140,35 150,50 Q160,65 145,110" stroke-dasharray="4"/>
+                    <path d="M145,110 Q160,75 175,85 Q190,100 170,140 Q150,180 150,220" stroke-dasharray="4"/>
+                    <path d="M50,200 Q70,240 100,245 Q130,240 150,220" stroke-dasharray="4"/>
+                </svg>
+                <div id="upload-placeholder" style="text-align: center; z-index: 5;">
+                    <div style="font-size: 3rem; margin-bottom: 1rem;">📸</div>
+                    <p style="color: var(--text-dim)">탭하여 사진 촬영 또는 선택</p>
                 </div>
-                <div class="upload-icon">🖐️</div>
-                <div class="upload-hint">탭하여 사진 선택<br>또는 카메라 촬영</div>
             </div>
-            <input id="fileInput" type="file" accept="image/*" capture="environment" style="display:none">
-            <button class="btn-primary" onclick="document.getElementById('fileInput').click()">📷 &nbsp;사진 촬영 / 선택</button>
-            <div id="uploadErr" class="err"></div>
+
+            <input type="file" id="file-input" accept="image/*" capture="environment" style="display:none" onchange="handleFile(event)">
+            
+            <button class="btn btn-primary" id="btn-analyze" disabled onclick="startAnalysis()">
+                분석 요청하기
+            </button>
         </div>
 
-        <!-- SCANNING -->
-        <div class="screen" id="scanningScreen">
-            <div class="badge" style="margin-bottom:20px">Analyzing</div>
-            <div class="scan-wrap">
-                <canvas id="scanCanvas" width="260" height="260"></canvas>
-                <div class="scan-glow"></div>
+        <!-- 3. SCANNING -->
+        <div class="screen" id="screen-scanning">
+            <div class="scanner-box">
+                <div class="scan-grid"></div>
+                <div class="scan-line"></div>
+                <img id="scan-img" src="" alt="scanning">
             </div>
-            <div class="scan-text" id="scanText">손금을 읽는 중...</div>
-            <div class="dots">
-                <div class="dot"></div><div class="dot"></div><div class="dot"></div>
+            <h2 id="scanning-text">이미지 분석 중...</h2>
+            <div class="loading-dots">
+                <div class="dot"></div>
+                <div class="dot"></div>
+                <div class="dot"></div>
+            </div>
+            <p class="mt-4" style="color: var(--text-dim); text-align: center; font-size: 0.85rem;">
+                인공지능이 손금의 패턴을 분석하고 있습니다.<br>잠시만 기다려 주세요.
+            </p>
+        </div>
+
+        <!-- 4. RESULT -->
+        <div class="screen" id="screen-result">
+            <div class="result-scroll">
+                <div class="overall-score">
+                    <div style="font-size: 0.9rem; color: var(--accent); font-weight: 700; letter-spacing: 2px;">OVERALL DESTINY</div>
+                    <div id="result-overall-title" style="font-size: 1.8rem; font-weight: 700; margin: 0.5rem 0;">찬란한 미래의 빛</div>
+                    <div class="stars" id="result-stars">★★★★☆</div>
+                </div>
+
+                <div id="result-cards-container">
+                    <!-- Cards will be injected here -->
+                </div>
+
+                <div class="result-card" style="border: 1px solid var(--accent); background: rgba(245, 158, 11, 0.05);">
+                    <div class="line-header">
+                        <div class="line-icon">🔮</div>
+                        <div class="line-name">종합 총평</div>
+                    </div>
+                    <p class="line-desc" id="result-summary"></p>
+                    <div style="display: flex; gap: 1rem; margin-top: 1.5rem; padding-top: 1rem; border-top: 1px solid rgba(255,255,255,0.05)">
+                        <div style="flex: 1;">
+                            <div style="font-size: 0.75rem; color: var(--text-dim)">행운의 색</div>
+                            <div style="font-weight: 700; color: var(--accent)" id="result-lucky-color">-</div>
+                        </div>
+                        <div style="flex: 1;">
+                            <div style="font-size: 0.75rem; color: var(--text-dim)">행운의 숫자</div>
+                            <div style="font-weight: 700; color: var(--primary)" id="result-lucky-number">-</div>
+                        </div>
+                    </div>
+                </div>
+
+                <div style="display: flex; gap: 1rem; margin-bottom: 2rem;">
+                    <button class="btn btn-secondary" style="flex: 1" onclick="goTo('intro')">홈으로</button>
+                    <button class="btn btn-primary" style="flex: 1.5" onclick="shareResult()">결과 공유하기</button>
+                </div>
             </div>
         </div>
 
-        <!-- RESULT -->
-        <div class="screen" id="resultScreen">
-            <button class="btn-back" onclick="resetApp()">←</button>
-            <div class="result-header">
-                <img id="thumbImg" class="thumb" src="" alt="hand" style="display:none">
-                <div class="badge">Your Palm Report</div>
-                <div style="font-size:18px;font-weight:600;color:#fff">✦ 손금 분석 결과 ✦</div>
-                <div class="stars" id="starsDisplay">★★★★☆</div>
+        <!-- 5. HISTORY -->
+        <div class="screen" id="screen-history">
+            <h2 style="margin-top: 3rem; margin-bottom: 1rem;">운명의 발자취</h2>
+            <p class="subtitle" style="text-align: left; margin-bottom: 1.5rem;">이전에 분석했던 손금 기록들입니다.</p>
+            
+            <div id="history-list" style="flex: 1;">
+                <!-- History items here -->
             </div>
-            <div id="cardsContainer" style="width:100%"></div>
-            <div id="summaryCard" class="summary-card" style="display:none"></div>
-            <div style="width:100%">
-                <button class="btn-primary" id="shareBtn">📤 &nbsp;결과 공유하기</button>
-                <button class="btn-ghost" onclick="resetApp()">🔄 &nbsp;다시 분석하기</button>
-            </div>
+
+            <button class="btn btn-secondary mt-4" onclick="clearHistory()">기록 모두 지우기</button>
         </div>
 
-        <!-- HISTORY -->
-        <div class="screen" id="historyScreen">
-            <button class="btn-back" onclick="goTo('introScreen')">←</button>
-            <div class="badge">Scan History</div>
-            <h2 style="font-size:22px;font-weight:600;color:#fff;margin-bottom:8px">분석 기록</h2>
-            <p class="subtitle">지금까지 분석한 결과들입니다</p>
-            <div id="historyList" class="history-list">
-                <!-- History items will be injected here -->
-            </div>
-            <button class="btn-ghost" style="margin-top: 30px;" onclick="clearHistory()">🗑️ &nbsp;전체 기록 삭제</button>
+    </div>
+
+    <!-- SETTINGS MODAL -->
+    <div id="settings-overlay" onclick="if(event.target==this)toggleSettings()">
+        <div class="settings-card">
+            <h3 style="margin-bottom: 1rem;">API 설정</h3>
+            <p style="font-size: 0.85rem; color: var(--text-dim); margin-bottom: 1.5rem;">
+                분석을 위해 Gemini API 키가 필요합니다.<br>
+                <a href="https://aistudio.google.com/app/apikey" target="_blank" style="color: var(--primary)">여기서 키 발급받기</a>
+            </p>
+            <label style="font-size: 0.8rem; display: block; margin-bottom: 0.5rem;">Gemini API Key</label>
+            <input type="password" id="api-key-input" placeholder="AIzaSy...">
+            <button class="btn btn-primary" onclick="saveSettings()">저장하기</button>
         </div>
     </div>
-    <script type="module" src="./main.js"></script>
+
+    <script>
+        // --- State & Config ---
+        const CONFIG = {
+            model: "gemini-1.5-flash",
+            apiKey: localStorage.getItem('palm_api_key') || "",
+            historyKey: 'palm_history_v1'
+        };
+
+        let currentScreen = 'intro';
+        let history = JSON.parse(localStorage.getItem(CONFIG.historyKey) || "[]");
+        let currentImageB64 = null;
+        let screenStack = ['intro'];
+
+        // --- Starfield Background ---
+        const canvas = document.getElementById('star-canvas');
+        const ctx = canvas.getContext('2d');
+        let stars = [];
+
+        function initStars() {
+            canvas.width = window.innerWidth;
+            canvas.height = window.innerHeight;
+            stars = [];
+            for(let i = 0; i < 150; i++) {
+                stars.push({
+                    x: Math.random() * canvas.width,
+                    y: Math.random() * canvas.height,
+                    size: Math.random() * 1.5,
+                    opacity: Math.random(),
+                    speed: Math.random() * 0.02 + 0.005
+                });
+            }
+        }
+
+        function drawStars() {
+            ctx.clearRect(0, 0, canvas.width, canvas.height);
+            stars.forEach(star => {
+                star.opacity += star.speed;
+                if(star.opacity > 1 || star.opacity < 0) star.speed *= -1;
+                ctx.fillStyle = `rgba(255, 255, 255, ${Math.max(0, star.opacity)})`;
+                ctx.beginPath();
+                ctx.arc(star.x, star.y, star.size, 0, Math.PI * 2);
+                ctx.fill();
+            });
+            requestAnimationFrame(drawStars);
+        }
+
+        window.addEventListener('resize', initStars);
+        initStars();
+        drawStars();
+
+        // --- Navigation ---
+        function goTo(screenId, direction = 'forward') {
+            document.querySelectorAll('.screen').forEach(s => s.classList.remove('active'));
+            const target = document.getElementById(`screen-${screenId}`);
+            target.classList.add('active');
+            
+            const backBtn = document.getElementById('btn-back');
+            if(screenId === 'intro') {
+                backBtn.style.visibility = 'hidden';
+                screenStack = ['intro'];
+            } else {
+                backBtn.style.visibility = 'visible';
+                if(direction === 'forward') screenStack.push(screenId);
+            }
+            
+            currentScreen = screenId;
+            if(screenId === 'history') renderHistory();
+        }
+
+        function goBack() {
+            if(screenStack.length > 1) {
+                screenStack.pop();
+                const prev = screenStack[screenStack.length - 1];
+                goTo(prev, 'backward');
+                screenStack.pop(); // Remove it because goTo will push it again
+                screenStack.push(prev);
+            }
+        }
+
+        // --- File Handling ---
+        function handleFile(e) {
+            const file = e.target.files[0];
+            if(!file) return;
+
+            const reader = new FileReader();
+            reader.onload = (event) => {
+                const b64 = event.target.result;
+                currentImageB64 = b64;
+                
+                const preview = document.getElementById('preview-img');
+                preview.src = b64;
+                preview.style.display = 'block';
+                
+                document.getElementById('upload-placeholder').style.display = 'none';
+                document.getElementById('guide-svg').style.opacity = '0.1';
+                document.getElementById('btn-analyze').disabled = false;
+            };
+            reader.readAsDataURL(file);
+        }
+
+        // --- API & Analysis ---
+        async function startAnalysis() {
+            if(!CONFIG.apiKey) {
+                alert("API 키를 먼저 설정해 주세요. (우측 상단 톱니바퀴 아이콘)");
+                toggleSettings();
+                return;
+            }
+
+            goTo('scanning');
+            document.getElementById('scan-img').src = currentImageB64;
+
+            const messages = [
+                "이미지 텍스처 분석 중...",
+                "생명선의 흐름 파악 중...",
+                "두뇌선의 깊이 측정 중...",
+                "감정선의 에너지 리딩 중...",
+                "운명의 좌표 계산 중...",
+                "우주의 메시지 수신 중..."
+            ];
+            
+            let msgIdx = 0;
+            const msgInterval = setInterval(() => {
+                msgIdx = (msgIdx + 1) % messages.length;
+                document.getElementById('scanning-text').innerText = messages[msgIdx];
+            }, 2000);
+
+            try {
+                const result = await callGemini(currentImageB64);
+                clearInterval(msgInterval);
+                
+                // Save to history
+                const historyItem = {
+                    id: Date.now(),
+                    date: new Date().toLocaleString(),
+                    image: currentImageB64,
+                    result: result
+                };
+                history.unshift(historyItem);
+                localStorage.setItem(CONFIG.historyKey, JSON.stringify(history.slice(0, 20))); // Keep last 20
+                
+                renderResult(result);
+                goTo('result');
+            } catch (error) {
+                console.error(error);
+                clearInterval(msgInterval);
+                alert("분석 중 오류가 발생했습니다. API 키를 확인하시거나 다시 시도해 주세요.");
+                goTo('upload');
+            }
+        }
+
+        async function callGemini(base64Data) {
+            const cleanB64 = base64Data.split(',')[1];
+            const mimeType = base64Data.split(',')[0].split(':')[1].split(';')[0];
+
+            const prompt = `당신은 30년 경력의 신비로운 손금 전문가 '코스믹 마스터'입니다. 제공된 손바닥 사진을 보고 운명을 분석해 주세요. 
+            분석 결과는 반드시 다음과 같은 JSON 형식으로만 응답하세요. 다른 텍스트는 절대 포함하지 마세요.
+            {
+                "overall_title": "분석을 요약하는 짧고 멋진 제목 (예: 끊임없는 도전의 개척자)",
+                "stars": 1~5 정수,
+                "summary": "전체적인 운세 총평 3~4문장",
+                "lines": [
+                    {"name": "생명선", "score": 1~5, "icon": "🌱", "desc": "건강과 활력에 대한 상세 분석 2문장"},
+                    {"name": "두뇌선", "score": 1~5, "icon": "💡", "desc": "지능과 판단력, 재능에 대한 상세 분석 2문장"},
+                    {"name": "감정선", "score": 1~5, "icon": "❤️", "desc": "애정운과 감수성에 대한 상세 분석 2문장"},
+                    {"name": "운명선", "score": 1~5, "icon": "🚀", "desc": "사회적 성취와 직업적 흐름에 대한 상세 분석 2문장"}
+                ],
+                "lucky_color": "행운의 색상명",
+                "lucky_number": 1~99 사이의 정수
+            }
+            톤앤매너는 신비롭고 희망적이며 전문적이어야 합니다. 손금이 잘 안 보여도 사진상의 특징(피부결, 두께, 색깔 등)을 기반으로 정성껏 분석하세요.`;
+
+            const url = `https://generativelanguage.googleapis.com/v1beta/models/${CONFIG.model}:generateContent?key=${CONFIG.apiKey}`;
+            
+            const response = await fetch(url, {
+                method: 'POST',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify({
+                    contents: [{
+                        parts: [
+                            { text: prompt },
+                            { inline_data: { mime_type: mimeType, data: cleanB64 } }
+                        ]
+                    }]
+                })
+            });
+
+            if(!response.ok) throw new Error("API call failed");
+            
+            const data = await response.json();
+            const textResponse = data.candidates[0].content.parts[0].text;
+            
+            // Clean JSON if model returns markdown block
+            const cleanJson = textResponse.replace(/```json|```/g, "").trim();
+            return JSON.parse(cleanJson);
+        }
+
+        // --- Rendering ---
+        function renderResult(data) {
+            document.getElementById('result-overall-title').innerText = data.overall_title;
+            document.getElementById('result-stars').innerText = '★'.repeat(data.stars) + '☆'.repeat(5 - data.stars);
+            document.getElementById('result-summary').innerText = data.summary;
+            document.getElementById('result-lucky-color').innerText = data.lucky_color;
+            document.getElementById('result-lucky-number').innerText = data.lucky_number;
+
+            const container = document.getElementById('result-cards-container');
+            container.innerHTML = '';
+
+            data.lines.forEach(line => {
+                const card = document.createElement('div');
+                card.className = 'result-card';
+                card.innerHTML = `
+                    <div class="line-header">
+                        <div class="line-icon">${line.icon}</div>
+                        <div class="line-name">${line.name}</div>
+                        <div class="line-score">${'★'.repeat(line.score)}</div>
+                    </div>
+                    <p class="line-desc">${line.desc}</p>
+                `;
+                container.appendChild(card);
+            });
+        }
+
+        function renderHistory() {
+            const list = document.getElementById('history-list');
+            list.innerHTML = '';
+            
+            if(history.length === 0) {
+                list.innerHTML = '<p style="text-align:center; color:var(--text-dim); margin-top:3rem;">아직 기록이 없습니다.</p>';
+                return;
+            }
+
+            history.forEach(item => {
+                const el = document.createElement('div');
+                el.className = 'history-item';
+                el.onclick = () => {
+                    renderResult(item.result);
+                    currentImageB64 = item.image; // For re-viewing or sharing
+                    goTo('result');
+                };
+                el.innerHTML = `
+                    <img src="${item.image}" class="history-thumb">
+                    <div class="history-info">
+                        <div class="history-summary">${item.result.overall_title}</div>
+                        <div class="history-date">${item.date}</div>
+                    </div>
+                    <div style="color: var(--accent)">${'★'.repeat(item.result.stars)}</div>
+                `;
+                list.appendChild(el);
+            });
+        }
+
+        function clearHistory() {
+            if(confirm("모든 기록을 삭제할까요?")) {
+                history = [];
+                localStorage.removeItem(CONFIG.historyKey);
+                renderHistory();
+            }
+        }
+
+        // --- Settings ---
+        function toggleSettings() {
+            const overlay = document.getElementById('settings-overlay');
+            overlay.style.display = overlay.style.display === 'flex' ? 'none' : 'flex';
+            if(overlay.style.display === 'flex') {
+                document.getElementById('api-key-input').value = CONFIG.apiKey;
+            }
+        }
+
+        function saveSettings() {
+            const key = document.getElementById('api-key-input').value.trim();
+            if(!key) {
+                alert("API 키를 입력해 주세요.");
+                return;
+            }
+            CONFIG.apiKey = key;
+            localStorage.setItem('palm_api_key', key);
+            alert("설정이 저장되었습니다.");
+            toggleSettings();
+        }
+
+        // --- Share ---
+        async function shareResult() {
+            const text = `AI가 분석한 나의 손금 결과: "${document.getElementById('result-overall-title').innerText}"\n${document.getElementById('result-summary').innerText}\n#손금AI #CosmicPalmistry`;
+            
+            if (navigator.share) {
+                try {
+                    await navigator.share({
+                        title: 'Cosmic Palmistry AI 결과',
+                        text: text,
+                        url: window.location.href
+                    });
+                } catch (err) {
+                    console.log("Share cancelled or failed");
+                }
+            } else {
+                navigator.clipboard.writeText(text);
+                alert("결과 텍스트가 클립보드에 복사되었습니다. ✨");
+            }
+        }
+
+        // Initial setup
+        document.getElementById('api-key-input').value = CONFIG.apiKey;
+    </script>
 </body>
 </html>
