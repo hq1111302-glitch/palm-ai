@@ -374,37 +374,31 @@
             max-width: 200px;
         }
 
-        /* Settings Modal */
-        #settings-overlay {
+        /* Error Toast */
+        .error-toast {
             position: fixed;
-            inset: 0;
-            background: rgba(0,0,0,0.8);
-            backdrop-filter: blur(5px);
-            z-index: 1000;
-            display: none;
-            align-items: center;
-            justify-content: center;
-            padding: 2rem;
-        }
-
-        .settings-card {
-            background: #1e1b4b;
-            border: 1px solid var(--glass-border);
-            border-radius: 24px;
-            padding: 2rem;
-            width: 100%;
-            max-width: 360px;
-        }
-
-        input {
-            width: 100%;
-            padding: 1rem;
-            background: rgba(0,0,0,0.3);
-            border: 1px solid var(--glass-border);
-            border-radius: 12px;
+            bottom: 2rem;
+            left: 50%;
+            transform: translateX(-50%) translateY(100px);
+            background: #dc2626;
             color: white;
-            margin-bottom: 1.5rem;
-            font-family: inherit;
+            padding: 1rem 1.5rem;
+            border-radius: 16px;
+            font-size: 0.9rem;
+            z-index: 2000;
+            opacity: 0;
+            transition: all 0.4s cubic-bezier(0.23, 1, 0.32, 1);
+            max-width: 90%;
+            text-align: center;
+        }
+        .error-toast.show {
+            transform: translateX(-50%) translateY(0);
+            opacity: 1;
+        }
+
+        .btn:disabled {
+            opacity: 0.4;
+            cursor: not-allowed;
         }
 
         /* Loading Dots */
@@ -575,18 +569,20 @@
 
     </div>
 
+    <!-- Error Toast -->
+    <div class="error-toast" id="error-toast"></div>
+
     <script>
         // --- State & Config ---
-        const CONFIG = {
-            model: "gemini-1.5-flash",
-            apiKey: localStorage.getItem('palm_api_key') || "",
-            historyKey: 'palm_history_v1'
-        };
+        const HISTORY_KEY = 'palm_history_v2';
+        const MAX_IMAGE_SIZE = 1200; // Max dimension for compression
 
         let currentScreen = 'intro';
-        let history = JSON.parse(localStorage.getItem(CONFIG.historyKey) || "[]");
+        let history = [];
+        try { history = JSON.parse(localStorage.getItem(HISTORY_KEY) || '[]'); } catch(e) { history = []; }
         let currentImageB64 = null;
         let screenStack = ['intro'];
+        let isAnalyzing = false;
 
         // --- Starfield Background ---
         const canvas = document.getElementById('star-canvas');
@@ -654,14 +650,43 @@
             }
         }
 
+        // --- Image Compression ---
+        function compressImage(file, maxSize) {
+            return new Promise((resolve) => {
+                const img = new Image();
+                const url = URL.createObjectURL(file);
+                img.onload = () => {
+                    URL.revokeObjectURL(url);
+                    let w = img.width, h = img.height;
+                    if (w > maxSize || h > maxSize) {
+                        if (w > h) { h = Math.round(h * maxSize / w); w = maxSize; }
+                        else { w = Math.round(w * maxSize / h); h = maxSize; }
+                    }
+                    const canvas = document.createElement('canvas');
+                    canvas.width = w;
+                    canvas.height = h;
+                    const ctx2 = canvas.getContext('2d');
+                    ctx2.drawImage(img, 0, 0, w, h);
+                    resolve(canvas.toDataURL('image/jpeg', 0.85));
+                };
+                img.onerror = () => {
+                    URL.revokeObjectURL(url);
+                    // Fallback: read as-is
+                    const reader = new FileReader();
+                    reader.onload = (e) => resolve(e.target.result);
+                    reader.readAsDataURL(file);
+                };
+                img.src = url;
+            });
+        }
+
         // --- File Handling ---
-        function handleFile(e) {
+        async function handleFile(e) {
             const file = e.target.files[0];
             if(!file) return;
 
-            const reader = new FileReader();
-            reader.onload = (event) => {
-                const b64 = event.target.result;
+            try {
+                const b64 = await compressImage(file, MAX_IMAGE_SIZE);
                 currentImageB64 = b64;
                 
                 const preview = document.getElementById('preview-img');
@@ -671,12 +696,25 @@
                 document.getElementById('upload-placeholder').style.display = 'none';
                 document.getElementById('guide-svg').style.opacity = '0.1';
                 document.getElementById('btn-analyze').disabled = false;
-            };
-            reader.readAsDataURL(file);
+            } catch(err) {
+                console.error('File handling error:', err);
+                showError('이미지를 불러오지 못했습니다.');
+            }
+        }
+
+        // --- Error Toast ---
+        function showError(msg) {
+            const toast = document.getElementById('error-toast');
+            toast.textContent = msg;
+            toast.classList.add('show');
+            setTimeout(() => toast.classList.remove('show'), 4000);
         }
 
         // --- API & Analysis ---
         async function startAnalysis() {
+            if (isAnalyzing) return;
+            isAnalyzing = true;
+
             goTo('scanning');
             document.getElementById('scan-img').src = currentImageB64;
 
@@ -686,20 +724,22 @@
                 "두뇌선의 깊이 측정 중...",
                 "감정선의 에너지 리딩 중...",
                 "운명의 좌표 계산 중...",
-                "우주의 메시지 수신 중..."
+                "우주의 메시지 수신 중...",
+                "운명의 별빛을 수집 중..."
             ];
             
             let msgIdx = 0;
             const msgInterval = setInterval(() => {
                 msgIdx = (msgIdx + 1) % messages.length;
-                document.getElementById('scanning-text').innerText = messages[msgIdx];
+                const el = document.getElementById('scanning-text');
+                if (el) el.innerText = messages[msgIdx];
             }, 2000);
 
             try {
-                const result = await callBackendApi(currentImageB64);
+                const result = await callBackendApiWithRetry(currentImageB64, 2);
                 clearInterval(msgInterval);
                 
-                // Save to history
+                // Save to history (thumbnail only, not full image)
                 const historyItem = {
                     id: Date.now(),
                     date: new Date().toLocaleString(),
@@ -707,37 +747,71 @@
                     result: result
                 };
                 history.unshift(historyItem);
-                localStorage.setItem(CONFIG.historyKey, JSON.stringify(history.slice(0, 20))); // Keep last 20
+                // Keep last 10 to avoid localStorage quota
+                const toSave = history.slice(0, 10);
+                try { localStorage.setItem(HISTORY_KEY, JSON.stringify(toSave)); } catch(e) { console.warn('localStorage full'); }
                 
                 renderResult(result);
                 goTo('result');
             } catch (error) {
-                console.error(error);
+                console.error('Analysis failed:', error);
                 clearInterval(msgInterval);
-                alert("분석 중 오류가 발생했습니다. 잠시 후 다시 시도해 주세요.");
+                showError(error.message || '분석 중 오류가 발생했습니다.');
                 goTo('upload');
+            } finally {
+                isAnalyzing = false;
             }
+        }
+
+        async function callBackendApiWithRetry(base64Data, maxRetries) {
+            let lastError;
+            for (let attempt = 0; attempt <= maxRetries; attempt++) {
+                try {
+                    return await callBackendApi(base64Data);
+                } catch (err) {
+                    lastError = err;
+                    console.warn(`Attempt ${attempt + 1} failed:`, err.message);
+                    if (attempt < maxRetries) {
+                        await new Promise(r => setTimeout(r, 1500 * (attempt + 1)));
+                    }
+                }
+            }
+            throw lastError;
         }
 
         async function callBackendApi(base64Data) {
             const cleanB64 = base64Data.split(',')[1];
-            const mimeType = base64Data.split(',')[0].split(':')[1].split(';')[0];
+            const mimeType = base64Data.split(',')[0].split(':')[1].split(';')[0] || 'image/jpeg';
 
-            const response = await fetch('/api/analyze', {
-                method: 'POST',
-                headers: { 'Content-Type': 'application/json' },
-                body: JSON.stringify({
-                    imageB64: cleanB64,
-                    mimeType: mimeType
-                })
-            });
+            const controller = new AbortController();
+            const timeout = setTimeout(() => controller.abort(), 25000);
 
-            if(!response.ok) {
-                const error = await response.json();
-                throw new Error(error.error || "API call failed");
+            try {
+                const response = await fetch('/api/analyze', {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify({ imageB64: cleanB64, mimeType }),
+                    signal: controller.signal
+                });
+                clearTimeout(timeout);
+
+                if (!response.ok) {
+                    let errMsg = '서버 오류가 발생했습니다.';
+                    try {
+                        const errData = await response.json();
+                        errMsg = errData.error || errMsg;
+                    } catch(e) {}
+                    throw new Error(errMsg);
+                }
+                
+                return await response.json();
+            } catch (err) {
+                clearTimeout(timeout);
+                if (err.name === 'AbortError') {
+                    throw new Error('요청 시간이 초과되었습니다. 다시 시도해 주세요.');
+                }
+                throw err;
             }
-            
-            return await response.json();
         }
 
         // --- Rendering ---
@@ -798,33 +872,28 @@
         function clearHistory() {
             if(confirm("모든 기록을 삭제할까요?")) {
                 history = [];
-                localStorage.removeItem(CONFIG.historyKey);
+                localStorage.removeItem(HISTORY_KEY);
                 renderHistory();
             }
         }
 
         // --- Share ---
         async function shareResult() {
-            const text = `AI가 분석한 나의 손금 결과: "${document.getElementById('result-overall-title').innerText}"\n${document.getElementById('result-summary').innerText}\n#손금AI #CosmicPalmistry`;
+            const title = document.getElementById('result-overall-title')?.innerText || '손금 분석';
+            const summary = document.getElementById('result-summary')?.innerText || '';
+            const text = `AI가 분석한 나의 손금 결과: "${title}"\n${summary}\n#손금AI #CosmicPalmistry`;
             
             if (navigator.share) {
                 try {
-                    await navigator.share({
-                        title: 'Cosmic Palmistry AI 결과',
-                        text: text,
-                        url: window.location.href
-                    });
-                } catch (err) {
-                    console.log("Share cancelled or failed");
-                }
+                    await navigator.share({ title: 'Cosmic Palmistry AI', text });
+                } catch (err) { /* user cancelled */ }
             } else {
-                navigator.clipboard.writeText(text);
-                alert("결과 텍스트가 클립보드에 복사되었습니다. ✨");
+                try {
+                    await navigator.clipboard.writeText(text);
+                    showError('클립보드에 복사되었습니다! ✨'); // Reuse toast for info too
+                } catch(e) {}
             }
         }
-
-        // Initial setup
-        document.getElementById('api-key-input').value = CONFIG.apiKey;
     </script>
 </body>
 </html>
