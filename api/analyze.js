@@ -6,8 +6,21 @@ export const config = {
 };
 
 export default async function handler(req, res) {
-  // CORS headers
-  res.setHeader('Access-Control-Allow-Origin', '*');
+  // --- Security: Domain Validation ---
+  const origin = req.headers.origin || req.headers.referer || '';
+  
+  // Allow local development and any vercel.app deployment for this project
+  const isAllowed = 
+    origin.startsWith('http://localhost:') || 
+    origin.startsWith('http://127.0.0.1:') || 
+    origin.endsWith('.vercel.app');
+
+  if (!isAllowed) {
+    return res.status(403).json({ error: '허용되지 않은 도메인에서의 접근입니다.' });
+  }
+
+  // CORS headers - dynamically set to the allowed origin
+  res.setHeader('Access-Control-Allow-Origin', origin);
   res.setHeader('Access-Control-Allow-Methods', 'POST, OPTIONS');
   res.setHeader('Access-Control-Allow-Headers', 'Content-Type');
 
