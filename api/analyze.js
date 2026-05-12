@@ -2,7 +2,7 @@
 // Vercel Serverless Function — securely proxies Gemini API requests
 
 export const config = {
-  maxDuration: 30, // Allow up to 30 seconds for Gemini to respond
+  maxDuration: 60, // Allow up to 60 seconds (for retries on 429)
 };
 
 export default async function handler(req, res) {
@@ -52,27 +52,50 @@ export default async function handler(req, res) {
 
     const url = `https://generativelanguage.googleapis.com/v1beta/models/${model}:generateContent?key=${apiKey}`;
 
-    const geminiRes = await fetch(url, {
-      method: 'POST',
-      headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify({
-        contents: [{
-          parts: [
-            { text: prompt },
-            { inline_data: { mime_type: mimeType, data: imageB64 } }
-          ]
-        }],
-        generationConfig: {
-          temperature: 0.9,
-          maxOutputTokens: 1024,
-          responseMimeType: 'application/json'
-        }
-      })
+    const requestBody = JSON.stringify({
+      contents: [{
+        parts: [
+          { text: prompt },
+          { inline_data: { mime_type: mimeType, data: imageB64 } }
+        ]
+      }],
+      generationConfig: {
+        temperature: 0.9,
+        maxOutputTokens: 1024,
+        responseMimeType: 'application/json'
+      }
     });
+
+    // Retry logic with backoff for 429 (rate limit)
+    let geminiRes;
+    const maxRetries = 3;
+    for (let attempt = 0; attempt <= maxRetries; attempt++) {
+      geminiRes = await fetch(url, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: requestBody
+      });
+
+      if (geminiRes.status === 429 && attempt < maxRetries) {
+        // Rate limited — wait and retry
+        const waitMs = (attempt + 1) * 5000; // 5s, 10s, 15s
+        console.log(`Rate limited (429). Waiting ${waitMs}ms before retry ${attempt + 1}/${maxRetries}...`);
+        await new Promise(r => setTimeout(r, waitMs));
+        continue;
+      }
+      break; // Success or non-429 error
+    }
 
     if (!geminiRes.ok) {
       const errBody = await geminiRes.text();
       console.error('Gemini API Error:', geminiRes.status, errBody);
+
+      if (geminiRes.status === 429) {
+        return res.status(429).json({
+          error: '요청이 너무 많습니다. 30초 후에 다시 시도해 주세요.'
+        });
+      }
+
       return res.status(502).json({
         error: `Gemini API 오류 (${geminiRes.status})`,
         details: errBody

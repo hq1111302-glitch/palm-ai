@@ -770,9 +770,15 @@
                     return await callBackendApi(base64Data);
                 } catch (err) {
                     lastError = err;
-                    console.warn(`Attempt ${attempt + 1} failed:`, err.message);
+                    const is429 = err.message && err.message.includes('너무 많습니다');
+                    const waitMs = is429 ? (attempt + 1) * 10000 : (attempt + 1) * 3000;
+                    console.warn(`Attempt ${attempt + 1} failed:`, err.message, `waiting ${waitMs}ms`);
+                    
                     if (attempt < maxRetries) {
-                        await new Promise(r => setTimeout(r, 1500 * (attempt + 1)));
+                        // Update scanning text to show wait status
+                        const el = document.getElementById('scanning-text');
+                        if (el) el.innerText = is429 ? '서버가 바쁩니다. 잠시 대기 중...' : '재시도 중...';
+                        await new Promise(r => setTimeout(r, waitMs));
                     }
                 }
             }
@@ -784,7 +790,7 @@
             const mimeType = base64Data.split(',')[0].split(':')[1].split(';')[0] || 'image/jpeg';
 
             const controller = new AbortController();
-            const timeout = setTimeout(() => controller.abort(), 25000);
+            const timeout = setTimeout(() => controller.abort(), 55000); // 55s to match server 60s
 
             try {
                 const response = await fetch('/api/analyze', {
