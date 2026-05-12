@@ -4,6 +4,8 @@
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
     <title>손금 AI | Cosmic Palmistry</title>
+    <!-- [광고 설정] 나중에 구글 애드센스 승인을 받으면 아래 주석을 풀고 본인의 코드를 넣으세요 -->
+    <!-- <script async src="https://pagead2.googlesyndication.com/pagead/js/adsbygoogle.js?client=ca-pub-XXXXXXXXXXXXXXXX" crossorigin="anonymous"></script> -->
     <style>
         @import url('https://fonts.googleapis.com/css2?family=Outfit:wght@300;400;600;700&family=Noto+Sans+KR:wght@300;400;500;700&display=swap');
 
@@ -436,6 +438,30 @@
             background: var(--glass-border);
             border-radius: 10px;
         }
+
+        /* Ad Layouts */
+        .ad-container {
+            width: 100%;
+            min-height: 60px;
+            background: rgba(255, 255, 255, 0.03);
+            border-top: 1px solid var(--glass-border);
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            font-size: 0.7rem;
+            color: var(--text-dim);
+            letter-spacing: 1px;
+            position: relative;
+            z-index: 50;
+        }
+        .ad-label {
+            position: absolute;
+            top: 4px;
+            left: 8px;
+            font-size: 0.6rem;
+            opacity: 0.3;
+            text-transform: uppercase;
+        }
     </style>
 </head>
 <body>
@@ -470,6 +496,12 @@
                 <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><path d="M3 12a9 9 0 1 0 9-9 9.75 9.75 0 0 0-6.74 2.74L3 8"/><path d="M3 3v5h5"/><path d="M12 7v5l4 2"/></svg>
                 과거 기록 보기
             </button>
+            <div class="spacer"></div>
+            <!-- 하단 배너 광고 자리 -->
+            <div class="ad-container">
+                <span class="ad-label">Advertisement</span>
+                광고 영역 (AdSense Banner)
+            </div>
         </div>
 
         <!-- 2. UPLOAD -->
@@ -552,6 +584,11 @@
                     <button class="btn btn-secondary" style="flex: 1" onclick="goTo('intro')">홈으로</button>
                     <button class="btn btn-primary" style="flex: 1.5" onclick="shareResult()">결과 공유하기</button>
                 </div>
+            </div>
+            <!-- 결과창 하단 배너 -->
+            <div class="ad-container">
+                <span class="ad-label">Advertisement</span>
+                광고 영역 (AdSense Banner)
             </div>
         </div>
 
@@ -737,6 +774,13 @@
 
             try {
                 const result = await callBackendApiWithRetry(currentImageB64, 2);
+                
+                // --- Ad Interstitial Simulation ---
+                // 수익 극대화를 위해 결과 노출 전 광고가 로딩될 시간을 벌어줍니다.
+                const el = document.getElementById('scanning-text');
+                if (el) el.innerText = "운명의 별빛을 정리 중입니다...";
+                await new Promise(r => setTimeout(r, 2000));
+
                 clearInterval(msgInterval);
                 
                 // Save to history (thumbnail only, not full image)
