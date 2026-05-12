@@ -455,9 +455,7 @@
                 <svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="m15 18-6-6 6-6"/></svg>
             </button>
             <div style="font-weight: 600; font-size: 1.1rem; color: var(--text-dim)">Palmistry AI</div>
-            <button class="btn-icon" onclick="toggleSettings()">
-                <svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="12" cy="12" r="3"/><path d="M19.4 15a1.65 1.65 0 0 0 .33 1.82l.06.06a2 2 0 0 1 0 2.83 2 2 0 0 1-2.83 0l-.06-.06a1.65 1.65 0 0 0-1.82-.33 1.65 1.65 0 0 0-1 1.51V21a2 2 0 0 1-2 2 2 2 0 0 1-2-2v-.09A1.65 1.65 0 0 0 9 19.4a1.65 1.65 0 0 0-1.82.33l-.06.06a2 2 0 0 1-2.83 0 2 2 0 0 1 12 12s-2.83 0l.06-.06a1.65 1.65 0 0 0 .33-1.82 1.65 1.65 0 0 0-1.51-1H3a2 2 0 0 1-2-2 2 2 0 0 1 2-2h.09A1.65 1.65 0 0 0 4.6 9a1.65 1.65 0 0 0-.33-1.82l-.06-.06a2 2 0 0 1 0-2.83 2 2 0 0 1 2.83 0l.06.06a1.65 1.65 0 0 0 1.82.33H9a1.65 1.65 0 0 0 1-1.51V3a2 2 0 0 1 2-2 2 2 0 0 1 2 2v.09a1.65 1.65 0 0 0 1 1.51 1.65 1.65 0 0 0 1.82-.33l.06-.06a2 2 0 0 1 2.83 0 2 2 0 0 1 0 2.83l-.06.06a1.65 1.65 0 0 0-.33 1.82V9a1.65 1.65 0 0 0 1.51 1H21a2 2 0 0 1 2 2 2 2 0 0 1-2 2h-.09a1.65 1.65 0 0 0-1.51 1z"/></svg>
-            </button>
+            <div style="width: 44px;"></div>
         </div>
 
         <!-- Screens -->
@@ -577,20 +575,6 @@
 
     </div>
 
-    <!-- SETTINGS MODAL -->
-    <div id="settings-overlay" onclick="if(event.target==this)toggleSettings()">
-        <div class="settings-card">
-            <h3 style="margin-bottom: 1rem;">API 설정</h3>
-            <p style="font-size: 0.85rem; color: var(--text-dim); margin-bottom: 1.5rem;">
-                분석을 위해 Gemini API 키가 필요합니다.<br>
-                <a href="https://aistudio.google.com/app/apikey" target="_blank" style="color: var(--primary)">여기서 키 발급받기</a>
-            </p>
-            <label style="font-size: 0.8rem; display: block; margin-bottom: 0.5rem;">Gemini API Key</label>
-            <input type="password" id="api-key-input" placeholder="AIzaSy...">
-            <button class="btn btn-primary" onclick="saveSettings()">저장하기</button>
-        </div>
-    </div>
-
     <script>
         // --- State & Config ---
         const CONFIG = {
@@ -693,12 +677,6 @@
 
         // --- API & Analysis ---
         async function startAnalysis() {
-            if(!CONFIG.apiKey) {
-                alert("API 키를 먼저 설정해 주세요. (우측 상단 톱니바퀴 아이콘)");
-                toggleSettings();
-                return;
-            }
-
             goTo('scanning');
             document.getElementById('scan-img').src = currentImageB64;
 
@@ -718,7 +696,7 @@
             }, 2000);
 
             try {
-                const result = await callGemini(currentImageB64);
+                const result = await callBackendApi(currentImageB64);
                 clearInterval(msgInterval);
                 
                 // Save to history
@@ -736,55 +714,30 @@
             } catch (error) {
                 console.error(error);
                 clearInterval(msgInterval);
-                alert("분석 중 오류가 발생했습니다. API 키를 확인하시거나 다시 시도해 주세요.");
+                alert("분석 중 오류가 발생했습니다. 잠시 후 다시 시도해 주세요.");
                 goTo('upload');
             }
         }
 
-        async function callGemini(base64Data) {
+        async function callBackendApi(base64Data) {
             const cleanB64 = base64Data.split(',')[1];
             const mimeType = base64Data.split(',')[0].split(':')[1].split(';')[0];
 
-            const prompt = `당신은 30년 경력의 신비로운 손금 전문가 '코스믹 마스터'입니다. 제공된 손바닥 사진을 보고 운명을 분석해 주세요. 
-            분석 결과는 반드시 다음과 같은 JSON 형식으로만 응답하세요. 다른 텍스트는 절대 포함하지 마세요.
-            {
-                "overall_title": "분석을 요약하는 짧고 멋진 제목 (예: 끊임없는 도전의 개척자)",
-                "stars": 1~5 정수,
-                "summary": "전체적인 운세 총평 3~4문장",
-                "lines": [
-                    {"name": "생명선", "score": 1~5, "icon": "🌱", "desc": "건강과 활력에 대한 상세 분석 2문장"},
-                    {"name": "두뇌선", "score": 1~5, "icon": "💡", "desc": "지능과 판단력, 재능에 대한 상세 분석 2문장"},
-                    {"name": "감정선", "score": 1~5, "icon": "❤️", "desc": "애정운과 감수성에 대한 상세 분석 2문장"},
-                    {"name": "운명선", "score": 1~5, "icon": "🚀", "desc": "사회적 성취와 직업적 흐름에 대한 상세 분석 2문장"}
-                ],
-                "lucky_color": "행운의 색상명",
-                "lucky_number": 1~99 사이의 정수
-            }
-            톤앤매너는 신비롭고 희망적이며 전문적이어야 합니다. 손금이 잘 안 보여도 사진상의 특징(피부결, 두께, 색깔 등)을 기반으로 정성껏 분석하세요.`;
-
-            const url = `https://generativelanguage.googleapis.com/v1beta/models/${CONFIG.model}:generateContent?key=${CONFIG.apiKey}`;
-            
-            const response = await fetch(url, {
+            const response = await fetch('/api/analyze', {
                 method: 'POST',
                 headers: { 'Content-Type': 'application/json' },
                 body: JSON.stringify({
-                    contents: [{
-                        parts: [
-                            { text: prompt },
-                            { inline_data: { mime_type: mimeType, data: cleanB64 } }
-                        ]
-                    }]
+                    imageB64: cleanB64,
+                    mimeType: mimeType
                 })
             });
 
-            if(!response.ok) throw new Error("API call failed");
+            if(!response.ok) {
+                const error = await response.json();
+                throw new Error(error.error || "API call failed");
+            }
             
-            const data = await response.json();
-            const textResponse = data.candidates[0].content.parts[0].text;
-            
-            // Clean JSON if model returns markdown block
-            const cleanJson = textResponse.replace(/```json|```/g, "").trim();
-            return JSON.parse(cleanJson);
+            return await response.json();
         }
 
         // --- Rendering ---
@@ -848,27 +801,6 @@
                 localStorage.removeItem(CONFIG.historyKey);
                 renderHistory();
             }
-        }
-
-        // --- Settings ---
-        function toggleSettings() {
-            const overlay = document.getElementById('settings-overlay');
-            overlay.style.display = overlay.style.display === 'flex' ? 'none' : 'flex';
-            if(overlay.style.display === 'flex') {
-                document.getElementById('api-key-input').value = CONFIG.apiKey;
-            }
-        }
-
-        function saveSettings() {
-            const key = document.getElementById('api-key-input').value.trim();
-            if(!key) {
-                alert("API 키를 입력해 주세요.");
-                return;
-            }
-            CONFIG.apiKey = key;
-            localStorage.setItem('palm_api_key', key);
-            alert("설정이 저장되었습니다.");
-            toggleSettings();
         }
 
         // --- Share ---
