@@ -6,6 +6,7 @@
     <title>손금 AI | Cosmic Palmistry</title>
     <!-- [광고 설정] 나중에 구글 애드센스 승인을 받으면 아래 주석을 풀고 본인의 코드를 넣으세요 -->
     <!-- <script async src="https://pagead2.googlesyndication.com/pagead/js/adsbygoogle.js?client=ca-pub-XXXXXXXXXXXXXXXX" crossorigin="anonymous"></script> -->
+    <script src="https://html2canvas.hertzen.com/dist/html2canvas.min.js"></script>
     <style>
         @import url('https://fonts.googleapis.com/css2?family=Outfit:wght@300;400;600;700&family=Noto+Sans+KR:wght@300;400;500;700&display=swap');
 
@@ -552,37 +553,54 @@
         <!-- 4. RESULT -->
         <div class="screen" id="screen-result">
             <div class="result-scroll">
-                <div class="overall-score">
-                    <div style="font-size: 0.9rem; color: var(--accent); font-weight: 700; letter-spacing: 2px;">OVERALL DESTINY</div>
-                    <div id="result-overall-title" style="font-size: 1.8rem; font-weight: 700; margin: 0.5rem 0;">찬란한 미래의 빛</div>
-                    <div class="stars" id="result-stars">★★★★☆</div>
-                </div>
-
-                <div id="result-cards-container">
-                    <!-- Cards will be injected here -->
-                </div>
-
-                <div class="result-card" style="border: 1px solid var(--accent); background: rgba(245, 158, 11, 0.05);">
-                    <div class="line-header">
-                        <div class="line-icon">🔮</div>
-                        <div class="line-name">종합 총평</div>
+                <!-- 캡처 영역 시작 -->
+                <div id="capture-area" style="padding: 1rem; border-radius: 24px; background: radial-gradient(circle at top right, #1e1b4b 0%, #030308 100%);">
+                    <div class="overall-score">
+                        <div style="font-size: 0.9rem; color: var(--accent); font-weight: 700; letter-spacing: 2px;">OVERALL DESTINY</div>
+                        <div id="result-overall-title" style="font-size: 1.8rem; font-weight: 700; margin: 0.5rem 0;">찬란한 미래의 빛</div>
+                        <div class="stars" id="result-stars">★★★★☆</div>
                     </div>
-                    <p class="line-desc" id="result-summary"></p>
-                    <div style="display: flex; gap: 1rem; margin-top: 1.5rem; padding-top: 1rem; border-top: 1px solid rgba(255,255,255,0.05)">
-                        <div style="flex: 1;">
-                            <div style="font-size: 0.75rem; color: var(--text-dim)">행운의 색</div>
-                            <div style="font-weight: 700; color: var(--accent)" id="result-lucky-color">-</div>
+
+                    <div id="result-cards-container">
+                        <!-- Cards will be injected here -->
+                    </div>
+
+                    <div class="result-card" style="border: 1px solid var(--accent); background: rgba(245, 158, 11, 0.05);">
+                        <div class="line-header">
+                            <div class="line-icon">🔮</div>
+                            <div class="line-name">종합 총평</div>
                         </div>
-                        <div style="flex: 1;">
-                            <div style="font-size: 0.75rem; color: var(--text-dim)">행운의 숫자</div>
-                            <div style="font-weight: 700; color: var(--primary)" id="result-lucky-number">-</div>
+                        <p class="line-desc" id="result-summary"></p>
+                        <div style="display: flex; gap: 1rem; margin-top: 1.5rem; padding-top: 1rem; border-top: 1px solid rgba(255,255,255,0.05)">
+                            <div style="flex: 1;">
+                                <div style="font-size: 0.75rem; color: var(--text-dim)">행운의 색</div>
+                                <div style="font-weight: 700; color: var(--accent)" id="result-lucky-color">-</div>
+                            </div>
+                            <div style="flex: 1;">
+                                <div style="font-size: 0.75rem; color: var(--text-dim)">행운의 숫자</div>
+                                <div style="font-weight: 700; color: var(--primary)" id="result-lucky-number">-</div>
+                            </div>
                         </div>
                     </div>
+                    
+                    <div style="text-align: center; font-size: 0.7rem; color: var(--text-dim); opacity: 0.5; margin-top: 1rem;">
+                        Cosmic Palmistry AI | hq1111302-glitch
+                    </div>
                 </div>
+                <!-- 캡처 영역 끝 -->
 
-                <div style="display: flex; gap: 1rem; margin-bottom: 2rem;">
-                    <button class="btn btn-secondary" style="flex: 1" onclick="goTo('intro')">홈으로</button>
-                    <button class="btn btn-primary" style="flex: 1.5" onclick="shareResult()">결과 공유하기</button>
+                <div style="display: flex; flex-direction: column; gap: 0.75rem; margin-top: 1.5rem; margin-bottom: 2rem;">
+                    <div style="display: flex; gap: 0.75rem;">
+                        <button class="btn btn-secondary" style="flex: 1" onclick="goTo('intro')">홈으로</button>
+                        <button class="btn btn-primary" style="flex: 2" id="btn-capture" onclick="captureAndShare()">
+                            <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"/><polyline points="7 10 12 15 17 10"/><line x1="12" y1="15" x2="12" y2="3"/></svg>
+                            이미지로 저장
+                        </button>
+                    </div>
+                    <button class="btn btn-secondary" onclick="shareResult()">
+                        <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><circle cx="18" cy="5" r="3"/><circle cx="6" cy="12" r="3"/><circle cx="18" cy="19" r="3"/><line x1="8.59" y1="13.51" x2="15.42" y2="17.49"/><line x1="15.41" y1="6.51" x2="8.59" y2="10.49"/></svg>
+                        텍스트로 공유하기
+                    </button>
                 </div>
             </div>
             <!-- 결과창 하단 배너 -->
@@ -927,7 +945,56 @@
             }
         }
 
-        // --- Share ---
+        // --- Share & Capture ---
+        async function captureAndShare() {
+            const btn = document.getElementById('btn-capture');
+            const originalContent = btn.innerHTML;
+            btn.disabled = true;
+            btn.innerHTML = '저장 중...';
+
+            try {
+                const area = document.getElementById('capture-area');
+                
+                // Use a slightly larger scale for better quality
+                const canvas = await html2canvas(area, {
+                    scale: 2,
+                    backgroundColor: '#030308',
+                    useCORS: true,
+                    logging: false
+                });
+
+                const dataUrl = canvas.toDataURL('image/png');
+                
+                // Mobile Share API support check
+                if (navigator.share && navigator.canShare) {
+                    const blob = await (await fetch(dataUrl)).blob();
+                    const file = new File([blob], 'palmistry-result.png', { type: 'image/png' });
+                    
+                    if (navigator.canShare({ files: [file] })) {
+                        await navigator.share({
+                            files: [file],
+                            title: '나의 손금 분석 결과',
+                            text: 'AI가 분석한 나의 손금 운명입니다! #손금AI #CosmicPalmistry'
+                        });
+                        return;
+                    }
+                }
+
+                // Fallback: Download for Desktop/Browser
+                const link = document.createElement('a');
+                link.download = `palm-ai-result-${Date.now()}.png`;
+                link.href = dataUrl;
+                link.click();
+                showError('이미지가 저장되었습니다! ✨');
+            } catch (err) {
+                console.error('Capture failed:', err);
+                showError('이미지 저장에 실패했습니다.');
+            } finally {
+                btn.disabled = false;
+                btn.innerHTML = originalContent;
+            }
+        }
+
         async function shareResult() {
             const title = document.getElementById('result-overall-title')?.innerText || '손금 분석';
             const summary = document.getElementById('result-summary')?.innerText || '';
@@ -940,7 +1007,7 @@
             } else {
                 try {
                     await navigator.clipboard.writeText(text);
-                    showError('클립보드에 복사되었습니다! ✨'); // Reuse toast for info too
+                    showError('클립보드에 복사되었습니다! ✨');
                 } catch(e) {}
             }
         }

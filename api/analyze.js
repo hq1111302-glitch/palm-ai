@@ -48,20 +48,24 @@ export default async function handler(req, res) {
 {
   "overall_title": "분석을 요약하는 짧고 멋진 제목",
   "stars": 4,
-  "summary": "전체적인 운세 총평 3~4문장",
+  "summary": "전체적인 운세 총평 3~4문장. 신비롭고 깊이 있는 문체 사용.",
   "lines": [
     {"name": "생명선", "score": 4, "icon": "🌱", "desc": "건강과 활력에 대한 상세 분석 2문장"},
     {"name": "두뇌선", "score": 4, "icon": "💡", "desc": "지능과 판단력에 대한 상세 분석 2문장"},
     {"name": "감정선", "score": 4, "icon": "❤️", "desc": "애정운과 감수성에 대한 상세 분석 2문장"},
-    {"name": "운명선", "score": 4, "icon": "🚀", "desc": "사회적 성취에 대한 상세 분석 2문장"}
+    {"name": "운명선", "score": 4, "icon": "🚀", "desc": "사회적 성취와 직업운에 대한 상세 분석 2문장"},
+    {"name": "태양선", "score": 4, "icon": "☀️", "desc": "성공, 명성, 예술적 재능에 대한 분석 2문장"},
+    {"name": "결혼선", "score": 4, "icon": "💍", "desc": "인연, 결혼운, 인간관계에 대한 분석 2문장"},
+    {"name": "건강선", "score": 4, "icon": "🛡️", "desc": "신체적 강인함과 기운의 흐름에 대한 분석 2문장"},
+    {"name": "재운선", "score": 4, "icon": "💰", "desc": "금전 흐름과 물질적 풍요에 대한 분석 2문장"}
   ],
   "lucky_color": "색상명",
   "lucky_number": 7
 }
 
-점수와 별점은 1~5 사이 정수입니다.
-톤앤매너는 신비롭고 희망적이며 전문적이어야 합니다.
-손금이 잘 안 보여도 사진상의 특징을 기반으로 정성껏 분석하세요.`;
+점수는 1~5 사이 정수입니다. 
+손금이 희미하거나 잘 보이지 않는 경우, 손바닥의 전반적인 형태와 기운을 바탕으로 '코스믹 마스터'답게 직관적으로 해석해 주세요.
+분석 내용은 매우 구체적이고 사용자에게 희망과 조언을 주는 방향으로 작성하세요.`;
 
     const url = `https://generativelanguage.googleapis.com/v1beta/models/${model}:generateContent?key=${apiKey}`;
 
