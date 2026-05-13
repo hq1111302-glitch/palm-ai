@@ -633,8 +633,9 @@
         const MAX_IMAGE_SIZE = 1200; // Max dimension for compression
 
         let currentScreen = 'intro';
-        let history = [];
-        try { history = JSON.parse(localStorage.getItem(HISTORY_KEY) || '[]'); } catch(e) { history = []; }
+        // NOTE: named palmHistory (not history) to avoid collision with window.history
+        let palmHistory = [];
+        try { palmHistory = JSON.parse(localStorage.getItem(HISTORY_KEY) || '[]'); } catch(e) { palmHistory = []; }
         let currentImageB64 = null;
         let screenStack = ['intro'];
         let isAnalyzing = false;
@@ -678,30 +679,32 @@
 
         // --- Navigation ---
         function goTo(screenId, direction = 'forward') {
-            document.querySelectorAll('.screen').forEach(s => s.classList.remove('active'));
             const target = document.getElementById(`screen-${screenId}`);
+            if (!target) { console.error('goTo: unknown screen:', screenId); return; }
+
+            document.querySelectorAll('.screen').forEach(s => s.classList.remove('active'));
             target.classList.add('active');
             
             const backBtn = document.getElementById('btn-back');
-            if(screenId === 'intro') {
+            if (screenId === 'intro') {
                 backBtn.style.visibility = 'hidden';
                 screenStack = ['intro'];
             } else {
                 backBtn.style.visibility = 'visible';
-                if(direction === 'forward') screenStack.push(screenId);
+                if (direction === 'forward') screenStack.push(screenId);
             }
             
             currentScreen = screenId;
-            if(screenId === 'history') renderHistory();
+            if (screenId === 'history') renderHistory();
         }
 
         function goBack() {
-            if(screenStack.length > 1) {
+            // Pop current screen, go to whatever is now on top
+            if (screenStack.length > 1) {
                 screenStack.pop();
                 const prev = screenStack[screenStack.length - 1];
+                // Use 'backward' so goTo does NOT push again
                 goTo(prev, 'backward');
-                screenStack.pop(); // Remove it because goTo will push it again
-                screenStack.push(prev);
             }
         }
 
@@ -801,16 +804,16 @@
 
                 clearInterval(msgInterval);
                 
-                // Save to history (thumbnail only, not full image)
+                // Save to history
                 const historyItem = {
                     id: Date.now(),
                     date: new Date().toLocaleString(),
                     image: currentImageB64,
                     result: result
                 };
-                history.unshift(historyItem);
+                palmHistory.unshift(historyItem);
                 // Keep last 10 to avoid localStorage quota
-                const toSave = history.slice(0, 10);
+                const toSave = palmHistory.slice(0, 10);
                 try { localStorage.setItem(HISTORY_KEY, JSON.stringify(toSave)); } catch(e) { console.warn('localStorage full'); }
                 
                 renderResult(result);
@@ -884,11 +887,12 @@
 
         // --- Rendering ---
         function renderResult(data) {
-            document.getElementById('result-overall-title').innerText = data.overall_title;
-            document.getElementById('result-stars').innerText = '★'.repeat(data.stars) + '☆'.repeat(5 - data.stars);
-            document.getElementById('result-summary').innerText = data.summary;
-            document.getElementById('result-lucky-color').innerText = data.lucky_color;
-            document.getElementById('result-lucky-number').innerText = data.lucky_number;
+            // Use textContent for all user-data fields to prevent XSS
+            document.getElementById('result-overall-title').textContent = data.overall_title;
+            document.getElementById('result-stars').textContent = '★'.repeat(data.stars) + '☆'.repeat(5 - data.stars);
+            document.getElementById('result-summary').textContent = data.summary;
+            document.getElementById('result-lucky-color').textContent = data.lucky_color;
+            document.getElementById('result-lucky-number').textContent = data.lucky_number;
 
             const container = document.getElementById('result-cards-container');
             container.innerHTML = '';
@@ -896,14 +900,33 @@
             data.lines.forEach(line => {
                 const card = document.createElement('div');
                 card.className = 'result-card';
-                card.innerHTML = `
-                    <div class="line-header">
-                        <div class="line-icon">${line.icon}</div>
-                        <div class="line-name">${line.name}</div>
-                        <div class="line-score">${'★'.repeat(line.score)}</div>
-                    </div>
-                    <p class="line-desc">${line.desc}</p>
-                `;
+
+                // Build DOM safely with textContent (no innerHTML for user data)
+                const header = document.createElement('div');
+                header.className = 'line-header';
+
+                const iconEl = document.createElement('div');
+                iconEl.className = 'line-icon';
+                iconEl.textContent = line.icon;
+
+                const nameEl = document.createElement('div');
+                nameEl.className = 'line-name';
+                nameEl.textContent = line.name;
+
+                const scoreEl = document.createElement('div');
+                scoreEl.className = 'line-score';
+                scoreEl.textContent = '★'.repeat(Math.min(5, Math.max(1, line.score)));
+
+                header.appendChild(iconEl);
+                header.appendChild(nameEl);
+                header.appendChild(scoreEl);
+
+                const desc = document.createElement('p');
+                desc.className = 'line-desc';
+                desc.textContent = line.desc;
+
+                card.appendChild(header);
+                card.appendChild(desc);
                 container.appendChild(card);
             });
         }
@@ -912,34 +935,60 @@
             const list = document.getElementById('history-list');
             list.innerHTML = '';
             
-            if(history.length === 0) {
-                list.innerHTML = '<p style="text-align:center; color:var(--text-dim); margin-top:3rem;">아직 기록이 없습니다.</p>';
+            if (palmHistory.length === 0) {
+                const empty = document.createElement('p');
+                empty.style.cssText = 'text-align:center; color:var(--text-dim); margin-top:3rem;';
+                empty.textContent = '아직 기록이 없습니다.';
+                list.appendChild(empty);
                 return;
             }
 
-            history.forEach(item => {
+            palmHistory.forEach(item => {
+                if (!item || !item.result) return; // Guard against malformed entries
+
                 const el = document.createElement('div');
                 el.className = 'history-item';
                 el.onclick = () => {
                     renderResult(item.result);
-                    currentImageB64 = item.image; // For re-viewing or sharing
+                    currentImageB64 = item.image;
                     goTo('result');
                 };
-                el.innerHTML = `
-                    <img src="${item.image}" class="history-thumb">
-                    <div class="history-info">
-                        <div class="history-summary">${item.result.overall_title}</div>
-                        <div class="history-date">${item.date}</div>
-                    </div>
-                    <div style="color: var(--accent)">${'★'.repeat(item.result.stars)}</div>
-                `;
+
+                // Build safely with textContent
+                const thumb = document.createElement('img');
+                thumb.src = item.image || '';
+                thumb.className = 'history-thumb';
+                thumb.alt = '손금 이미지';
+                thumb.onerror = () => { thumb.style.display = 'none'; };
+
+                const info = document.createElement('div');
+                info.className = 'history-info';
+
+                const summary = document.createElement('div');
+                summary.className = 'history-summary';
+                summary.textContent = item.result.overall_title || '분석 결과';
+
+                const date = document.createElement('div');
+                date.className = 'history-date';
+                date.textContent = item.date || '';
+
+                info.appendChild(summary);
+                info.appendChild(date);
+
+                const stars = document.createElement('div');
+                stars.style.color = 'var(--accent)';
+                stars.textContent = '★'.repeat(Math.min(5, item.result.stars || 0));
+
+                el.appendChild(thumb);
+                el.appendChild(info);
+                el.appendChild(stars);
                 list.appendChild(el);
             });
         }
 
         function clearHistory() {
-            if(confirm("모든 기록을 삭제할까요?")) {
-                history = [];
+            if (confirm('모든 기록을 삭제할까요?')) {
+                palmHistory = [];
                 localStorage.removeItem(HISTORY_KEY);
                 renderHistory();
             }
@@ -947,40 +996,59 @@
 
         // --- Share & Capture ---
         async function captureAndShare() {
+            // Guard: html2canvas might not have loaded (CDN failure)
+            if (typeof html2canvas === 'undefined') {
+                showError('이미지 저장 기능을 불러오지 못했습니다. 새로고침 후 다시 시도해 주세요.');
+                return;
+            }
+
             const btn = document.getElementById('btn-capture');
             const originalContent = btn.innerHTML;
             btn.disabled = true;
             btn.innerHTML = '저장 중...';
 
+            // Temporarily hide ad placeholder so it doesn't appear in the captured image
+            const adContainers = document.querySelectorAll('#screen-result .ad-container');
+            adContainers.forEach(ad => ad.style.display = 'none');
+
             try {
                 const area = document.getElementById('capture-area');
-                
-                // Use a slightly larger scale for better quality
-                const canvas = await html2canvas(area, {
+
+                const captureCanvas = await html2canvas(area, {
                     scale: 2,
                     backgroundColor: '#030308',
                     useCORS: true,
-                    logging: false
+                    allowTaint: false,
+                    logging: false,
+                    // Ignore elements that shouldn't appear in the card
+                    ignoreElements: (el) => el.classList.contains('ad-container')
                 });
 
-                const dataUrl = canvas.toDataURL('image/png');
-                
-                // Mobile Share API support check
+                const dataUrl = captureCanvas.toDataURL('image/png');
+
+                // Mobile: try native file share first
                 if (navigator.share && navigator.canShare) {
-                    const blob = await (await fetch(dataUrl)).blob();
-                    const file = new File([blob], 'palmistry-result.png', { type: 'image/png' });
-                    
-                    if (navigator.canShare({ files: [file] })) {
-                        await navigator.share({
-                            files: [file],
-                            title: '나의 손금 분석 결과',
-                            text: 'AI가 분석한 나의 손금 운명입니다! #손금AI #CosmicPalmistry'
-                        });
-                        return;
+                    try {
+                        const blob = await (await fetch(dataUrl)).blob();
+                        const file = new File([blob], 'palmistry-result.png', { type: 'image/png' });
+                        if (navigator.canShare({ files: [file] })) {
+                            await navigator.share({
+                                files: [file],
+                                title: '나의 손금 분석 결과',
+                                text: 'AI가 분석한 나의 손금 운명입니다! #손금AI #CosmicPalmistry'
+                            });
+                            return;
+                        }
+                    } catch (shareErr) {
+                        if (shareErr.name !== 'AbortError') {
+                            console.warn('Share API failed, falling back to download:', shareErr);
+                        } else {
+                            return; // User cancelled share — do nothing
+                        }
                     }
                 }
 
-                // Fallback: Download for Desktop/Browser
+                // Fallback: trigger download
                 const link = document.createElement('a');
                 link.download = `palm-ai-result-${Date.now()}.png`;
                 link.href = dataUrl;
@@ -990,6 +1058,7 @@
                 console.error('Capture failed:', err);
                 showError('이미지 저장에 실패했습니다.');
             } finally {
+                adContainers.forEach(ad => ad.style.display = '');
                 btn.disabled = false;
                 btn.innerHTML = originalContent;
             }
