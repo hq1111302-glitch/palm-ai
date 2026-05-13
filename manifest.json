@@ -1,0 +1,17 @@
+{
+  "name": "Cosmic Palmistry AI",
+  "short_name": "Palmistry AI",
+  "description": "인공지능이 읽어주는 당신의 손금 운명",
+  "start_url": ".",
+  "display": "standalone",
+  "background_color": "#030308",
+  "theme_color": "#8b5cf6",
+  "icons": [
+    {
+      "src": "data:image/svg+xml,<svg xmlns=%22http://www.w3.org/2000/svg%22 viewBox=%220 0 100 100%22><rect width=%22100%22 height=%22100%22 rx=%2220%22 fill=%22%231e1b4b%22/><text y=%22.9em%22 x=%225%22 font-size=%2280%22>🖐️</text></svg>",
+      "sizes": "192x192 512x512",
+      "type": "image/svg+xml",
+      "purpose": "any maskable"
+    }
+  ]
+}
