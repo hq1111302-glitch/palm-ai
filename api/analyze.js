@@ -11,11 +11,14 @@ export default async function handler(req, res) {
 
   // Allow local development and any vercel.app deployment for this project
   const isAllowed =
+    !origin || // Allow requests without origin (some mobile browsers/proxies)
     origin.startsWith('http://localhost:') ||
     origin.startsWith('http://127.0.0.1:') ||
+    origin.includes('192.168.') || // Allow local network IPs
     origin.endsWith('.vercel.app');
 
   if (!isAllowed) {
+    console.warn('[Security] Blocked request from origin:', origin);
     return res.status(403).json({ error: '허용되지 않은 도메인에서의 접근입니다.' });
   }
 
@@ -48,7 +51,7 @@ export default async function handler(req, res) {
       return res.status(500).json({ error: 'GEMINI_API_KEY 환경 변수가 설정되지 않았습니다.' });
     }
 
-    const model = 'gemini-2.0-flash';
+    const model = 'gemini-1.5-flash';
 
     const prompt = `당신은 억겁의 세월 동안 별들의 속삭임을 읽어온 전설적인 손금 마스터 '코스믹 로드(Cosmic Lord)'입니다.
 제공된 손바닥 이미지를 초자연적인 통찰력으로 분석하여 사용자의 운명과 기운을 읽어주세요.
@@ -61,12 +64,7 @@ export default async function handler(req, res) {
   "lines": [
     {"name": "생명선", "score": 4, "icon": "🌱", "desc": "생명력의 뿌리와 건강의 흐름에 대한 심오한 분석 2문장"},
     {"name": "두뇌선", "score": 4, "icon": "💡", "desc": "지혜의 깊이와 잠재된 창의성에 대한 통찰 2문장"},
-    {"name": "감정선", "score": 4, "icon": "❤️", "desc": "사랑의 파동과 영혼의 공명에 대한 감성적인 리딩 2문장"},
-    {"name": "운명선", "score": 4, "icon": "🚀", "desc": "사회적 소명과 성취의 궤적에 대한 강력한 예언 2문장"},
-    {"name": "태양선", "score": 4, "icon": "☀️", "desc": "내면의 빛이 만드는 성공과 광휘에 대한 찬사 2문장"},
-    {"name": "결혼선", "score": 4, "icon": "💍", "desc": "우주가 맺어준 인연과 관계의 조화에 대한 조언 2문장"},
-    {"name": "건강선", "score": 4, "icon": "🛡️", "desc": "영적 기운과 육체적 강인함의 조화에 대한 분석 2문장"},
-    {"name": "재운선", "score": 4, "icon": "💰", "desc": "풍요의 샘과 물질적 에너지의 흐름에 대한 분석 2문장"}
+    {"name": "감정선", "score": 4, "icon": "❤️", "desc": "사랑의 파동과 영혼의 공명에 대한 감성적인 리딩 2문장"}
   ],
   "lucky_color": "행운의 색상명",
   "lucky_number": 7
@@ -90,28 +88,15 @@ export default async function handler(req, res) {
       generationConfig: {
         temperature: 0.85,
         maxOutputTokens: 2048, // Increased: 8 lines × 2 sentences each needs more room
-        responseMimeType: 'application/json'
+        response_mime_type: 'application/json'
       }
     });
 
-    // Retry logic with backoff for 429 (rate limit)
-    let geminiRes;
-    const maxRetries = 3;
-    for (let attempt = 0; attempt <= maxRetries; attempt++) {
-      geminiRes = await fetch(url, {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: requestBody
-      });
-
-      if (geminiRes.status === 429 && attempt < maxRetries) {
-        const waitMs = (attempt + 1) * 5000; // 5s, 10s, 15s
-        console.log(`Rate limited (429). Waiting ${waitMs}ms before retry ${attempt + 1}/${maxRetries}...`);
-        await new Promise(r => setTimeout(r, waitMs));
-        continue;
-      }
-      break; // Success or non-429 error
-    }
+    const geminiRes = await fetch(url, {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: requestBody
+    });
 
     if (!geminiRes.ok) {
       const errBody = await geminiRes.text();

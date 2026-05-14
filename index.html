@@ -852,7 +852,8 @@
             document.getElementById('scan-img').src = currentImageB64;
 
             const messages = [
-                "이미지 텍스처 분석 중...",
+                "우주와 연결을 시도 중...",
+                "이미지 데이터를 행성으로 전송 중...",
                 "생명선의 흐름 파악 중...",
                 "두뇌선의 깊이 측정 중...",
                 "감정선의 에너지 리딩 중...",
@@ -871,11 +872,10 @@
             try {
                 const result = await callBackendApiWithRetry(currentImageB64, 2);
                 
-                // --- Ad Interstitial Simulation ---
-                // 수익 극대화를 위해 결과 노출 전 광고가 로딩될 시간을 벌어줍니다.
+                // --- Ad Interstitial Simulation Removed for speed ---
                 const el = document.getElementById('scanning-text');
                 if (el) el.innerText = "운명의 별빛을 정리 중입니다...";
-                await new Promise(r => setTimeout(r, 2000));
+                // await new Promise(r => setTimeout(r, 2000)); // Deleted for performance
 
                 clearInterval(msgInterval);
                 
@@ -917,7 +917,7 @@
                     if (attempt < maxRetries) {
                         // Update scanning text to show wait status
                         const el = document.getElementById('scanning-text');
-                        if (el) el.innerText = is429 ? '서버가 바쁩니다. 잠시 대기 중...' : '재시도 중...';
+                        if (el) el.innerText = is429 ? 'AI 서버 할당량이 초과되었습니다. 잠시 후 재시도...' : '연결 상태 확인 중...';
                         await new Promise(r => setTimeout(r, waitMs));
                     }
                 }
@@ -942,10 +942,12 @@
                 clearTimeout(timeout);
 
                 if (!response.ok) {
-                    let errMsg = '서버 오류가 발생했습니다.';
+                    let errMsg = `서버 오류 (${response.status})`;
                     try {
                         const errData = await response.json();
                         errMsg = errData.error || errMsg;
+                        if (response.status === 429) errMsg = '무료 AI 할당량이 초과되었습니다. 약 30초~1분 후 다시 시도해 주세요.';
+                        else if (errData.details) errMsg += `: ${errData.details}`;
                     } catch(e) {}
                     throw new Error(errMsg);
                 }
