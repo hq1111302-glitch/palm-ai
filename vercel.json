@@ -1,8 +1,7 @@
 {
-  "buildCommand": "",
-  "outputDirectory": ".",
-  "framework": null,
+  "version": 2,
+  "cleanUrls": true,
   "rewrites": [
-    { "source": "/api/analyze", "destination": "/api/analyze" }
+    { "source": "/api/(.*)", "destination": "/api/$1" }
   ]
 }
